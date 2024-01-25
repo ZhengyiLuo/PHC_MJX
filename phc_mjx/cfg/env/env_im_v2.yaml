@@ -1,0 +1,44 @@
+task: HumanoidIm
+note: this is the default config file for humanoid_env
+episode_length: 300
+sim_timestep_inv: 450
+control_frequency_inv: 15
+control_mode: "uhc_pd"
+power_scale: 1.0
+root_height_obs: true
+enable_early_termination: True
+kp_scale: 1.0
+kd_scale: 1.0
+cycle_motion: False
+clip_actions: True
+
+pdp_scale: 1
+pdd_scale: 1
+pdi_scale: 1
+
+self_obs_v: 2
+
+#### Task Configs
+im_obs_v: 2
+im_reward_v: 2
+
+contact_bodies: ["R_Ankle", "L_Ankle", "R_Toe", "L_Toe"]
+resetBodies: ['Pelvis', 'L_Hip', 'L_Knee', 'R_Hip', 'R_Knee', 'Torso', 'Spine', 'Chest', 'Neck', 'Head', 'L_Thorax', 'L_Shoulder', 'L_Elbow', 'L_Wrist', 'L_Hand', 'R_Thorax', 'R_Shoulder', 'R_Elbow', 'R_Wrist', 'R_Hand']
+render_mode: "human"
+camera: "side"
+state_init: MoCap
+power_reward: True
+power_coefficient: 0.00005
+
+shape_resampling_interval: 100
+
+motion_file: "data/amass/amass_copycat_take6_test.pkl"
+termination_distance: 0.25
+reward_specs:
+  "k_pos": 100
+  "k_rot": 10
+  "k_vel": 0.1
+  
+  "w_pos": 0.5
+  "w_rot": 0.4
+  "w_vel": 0.1
