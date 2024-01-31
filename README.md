@@ -9,6 +9,7 @@ pip install git+https://github.com/ZhengyiLuo/SMPLSim.git@master
 
 ```
 python examples/env_humanoid_test.py headless=False
+python phc_mjx/run.py env.motion_file=data/amass/amass_copycat_take6_train.pkl exp_name=im_obsv2_1 env.self_obs_v=2 env.im_obs_v=2 env.im_reward_v=2
 ```
 
 ## Citation
