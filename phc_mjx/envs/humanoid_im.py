@@ -213,7 +213,7 @@ class HumanoidIm(HumanoidTask):
             ref_body_vel_subset = ref_dict.body_vel[..., self.track_bodies_id, :]
             ref_body_ang_vel_subset = ref_dict.body_ang_vel[..., self.track_bodies_id, :]
             
-            task_obs = compute_imitation_observations_v2(qpos, qvel, body_pos_subset, body_rot_subset, body_vel, body_ang_vel,  ref_pos_subset, ref_rot_subset, ref_body_vel_subset, ref_body_ang_vel_subset, self.num_traj_samples, upright=self.upright_start, humanoid_type = self.humanoid_type)
+            task_obs = compute_imitation_observations_v2(root_pos, root_rot, body_pos_subset, body_rot_subset, body_vel, body_ang_vel,  ref_pos_subset, ref_rot_subset, ref_body_vel_subset, ref_body_ang_vel_subset, self.num_traj_samples, upright=self.upright_start, humanoid_type = self.humanoid_type)
             
         
         return np.concatenate([v.ravel() for v in task_obs.values()], axis=0, dtype=self.dtype)
@@ -362,13 +362,11 @@ def compute_imitation_observations_v1(qpos, qvel, body_pos, body_rot, ref_body_p
     return  obs
 
 
-def compute_imitation_observations_v2(qpos, qvel, body_pos, body_rot, body_vel, body_ang_vel, ref_body_pos, ref_body_rot, ref_body_vel, ref_body_ang_vel, time_steps, upright, humanoid_type = "smpl"):
+def compute_imitation_observations_v2(root_pos, root_rot, body_pos, body_rot, body_vel, body_ang_vel, ref_body_pos, ref_body_rot, ref_body_vel, ref_body_ang_vel, time_steps, upright, humanoid_type = "smpl"):
     # We do not use any dof in observation.
     # the design of the ref_qvel isn't good. 
     obs = OrderedDict()
     B, J, _ = body_pos.shape
-    root_rot = qpos[:, 3:7]
-    root_pos = qpos[:, :3]
 
     if not upright:
         root_rot = npt_utils.remove_base_rot(root_rot, humanoid_type)
