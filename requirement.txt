@@ -16,6 +16,7 @@ mujoco
 scikit-image
 gym
 git+https://github.com/ZhengyiLuo/smplx.git@master
+git+https://github.com/ZhengyiLuo/SMPLSim.git@master
 lxml
 autograd
 scikit-learn
