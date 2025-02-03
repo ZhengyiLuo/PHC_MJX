@@ -1,3 +1,4 @@
+import os 
 from typing import Any, Sequence
 import numpy as np
 from collections import OrderedDict
@@ -5,6 +6,7 @@ import torch
 import mujoco
 from collections import defaultdict
 import copy
+from importlib.resources import files
 
 from smpl_sim.envs.humanoid_task import HumanoidTask
 import smpl_sim.utils.np_transform_utils as npt_utils
@@ -13,6 +15,7 @@ from easydict import EasyDict
 from smpl_sim.smpllib.motion_lib_smpl import MotionLibSMPL
 from smpl_sim.smpllib.motion_lib_base import FixHeightMode
 from smpl_sim.envs.humanoid_env import HumanoidEnv
+from smpl_sim.smpllib.smpl_local_robot import SMPL_Robot
 
 
 
@@ -35,6 +38,55 @@ class HumanoidIm(HumanoidTask):
         self.im_reward_v = cfg.env.im_reward_v
         super().__init__(cfg)
         self.setup_motionlib()
+        
+    def _create_humanoid_robot(self, cfg):
+        if self.humanoid_type in ["smpl", "smplh", "smplx"]:
+            robot_cfg = {
+                "mesh": cfg.robot.has_mesh,
+                "replace_feet": cfg.robot.replace_feet,
+                "rel_joint_lm": cfg.robot.has_jt_limit,
+                "remove_toe": cfg.robot.get("remove_toe", False),
+                "freeze_hand": cfg.robot.get("freeze_hand", False),
+                "real_weight_porpotion_capsules": cfg.robot.real_weight_porpotion_capsules,
+                "real_weight_porpotion_boxes": cfg.robot.real_weight_porpotion_boxes,
+                "real_weight": cfg.robot.real_weight,
+                "master_range": cfg.robot.get("master_range", 30),
+                "big_ankle": cfg.robot.big_ankle,
+                "box_body": cfg.robot.box_body,
+                "masterfoot": cfg.robot.get("masterfoot", False),
+                "upright_start": self.upright_start,
+                "model": self.humanoid_type,
+                "create_vel_sensors": cfg.robot.create_vel_sensors,
+                "body_params": {},
+                "joint_params": {},
+                "geom_params": {},
+                "actuator_params": {},
+            }
+            if os.path.exists(self._smpl_data_dir):
+                self.robot = SMPL_Robot(
+                    robot_cfg,
+                    data_dir=self._smpl_data_dir,
+                )
+                
+                self.default_xml_str = self.robot.export_xml_string().decode("utf-8")
+            else:
+                print("Missing SMPL Files!!!!! Using mean netural body ")
+                default_smpl_file = files('smpl_sim').joinpath('data/assets/mjcf/smpl_humanoid.xml')
+                with open(default_smpl_file, 'r') as file:
+                    self.default_xml_str = file.read()
+                self.robot = None
+            
+            if self.render_mode == "rgb_array":
+                # this is temp fix for rendering without visualizer, should we add a camera directly in SMPL_robot
+                self.default_xml_str = smplxadd.smpl_add_camera(self.default_xml_str)
+            
+            default_smpl_file = 'phc_mjx/assets/mjcf/smpl_motivo.xml'
+            with open(default_smpl_file, 'r') as file:
+                self.default_xml_str = file.read()
+            
+            
+        else:
+            raise NotImplementedError(f"humanoid_type: {self.humanoid_type}")
         
     def create_task_visualization(self):
         if self.viewer is not None: # this implies that headless == False
@@ -140,7 +192,6 @@ class HumanoidIm(HumanoidTask):
         return obs_size 
     
     def compute_reset(self):
-        terminated, truncated = False, False
         time = (self.cur_t) * self.dt + self._motion_start_times + self._motion_start_times_offset # Reset is also called after the progress_buf is updated. 
         ref_dict = self.get_state_from_motionlib_cache(self._sampled_motion_ids, time, self.global_offset)
         body_pos = self.get_body_xpos()[None,]
@@ -148,9 +199,9 @@ class HumanoidIm(HumanoidTask):
         
         body_pos_subset = body_pos[..., self.reset_bodies_id, :]
         ref_pos_subset = ref_dict.xpos[..., self.reset_bodies_id, :]
-        terminated = compute_humanoid_im_reset(body_pos_subset, ref_pos_subset, termination_distance=self.termination_distance, use_mean=self.im_eval)[0]
-        truncated = (time > self.motion_lib.get_motion_length(self._sampled_motion_ids))[0]
-        return terminated, truncated
+        died = compute_humanoid_im_reset(body_pos_subset, ref_pos_subset, termination_distance=self.termination_distance, use_mean=self.im_eval)[0]
+        timed_out = (time > self.motion_lib.get_motion_length(self._sampled_motion_ids))[0]
+        return died, timed_out
     
     
     def update_task(self):
